@@ -177,53 +177,80 @@ class LightSentimentAnalyzerV4:
         else:
             return None
 
-    # -------------------------
-    # final predict: ensemble
+        # -------------------------
+    # final predict: ensemble (score 0–1)
     # -------------------------
     def predict(self, text):
-        # rule-based score (range arbitrary)
+        # rule-based score (arbitrary range)
         rule_s = self.rule_score(text)
 
-        # onnx model probabilistic prediction
-        proba = self.onnx_predict_proba(text)  # may be None
+        # onnx proba (dict or None)
+        proba = self.onnx_predict_proba(text)
+
+        # -----------------------------
+        # 1) Jika ONNX tidak ada → fallback rule-based dengan 0–1 confidence
+        # -----------------------------
         if proba is None:
-            # fallback: map rule_score -> label
-            if rule_s > 0.5:
-                return {"label": "positif", "score": rule_s, "model": self.version}
-            elif rule_s < -0.5:
-                return {"label": "negatif", "score": abs(rule_s), "model": self.version}
+            # konversi rule_s ke skala [-1,1]
+            rule_norm = np.tanh(rule_s / 3.0)
+            # konversi ke skala 0–1
+            rule_conf = (rule_norm + 1) / 2
+
+            if rule_norm > 0.2:
+                return {"label": "positif", "score": float(rule_conf), "model": self.version}
+            elif rule_norm < -0.2:
+                return {"label": "negatif", "score": float(1 - rule_conf), "model": self.version}
             else:
                 return {"label": "netral", "score": 0.5, "model": self.version}
 
-        # compute onnx_score as single float in [-1,1] (pos-neg)
-        if "pos" in proba and "neg" in proba:
-            onnx_score = float(proba["pos"] - proba["neg"])
-            onnx_conf = float(proba.get("pos", 0.0))
-        elif "pos" in proba and "neg" not in proba:
-            onnx_score = float(proba.get("pos", 0.0))
-            onnx_conf = onnx_score
+        # -----------------------------
+        # 2) ONNX tersedia → kita ambil probabilitas murni (0–1) dari model
+        # -----------------------------
+        P_neg = float(proba.get("neg", 0.0))
+        P_pos = float(proba.get("pos", 0.0))
+        P_neu = float(proba.get("neu", 0.0)) if "neu" in proba else None
+
+        # compute onnx score
+        if P_neu is not None:
+            # model 3 kelas
+            onnx_score = P_pos - P_neg
         else:
-            # fallback: use first/last
-            vals = list(proba.values())
-            onnx_score = float(vals[-1] - vals[0]) if len(vals) >= 2 else float(vals[0])
-            onnx_conf = float(max(vals))
+            # model 2 kelas
+            onnx_score = P_pos - P_neg
 
-        # normalize rule score to roughly [-1,1] using tanh-like scaling
-        rule_norm = np.tanh(rule_s / 3.0)  # adjust divisor if needed
+        # normalize rule score [-1..1]
+        rule_norm = np.tanh(rule_s / 3.0)
 
-        # ensemble: weighted average
+        # ensemble combine (still -1..1)
         w = self.onnx_weight
         ensemble_score = w * onnx_score + (1 - w) * rule_norm
 
-        # map ensemble_score to label
+        # -----------------------------
+        # 3) tentukan label
+        # -----------------------------
         if ensemble_score > 0.2:
             label = "positif"
-            conf = min(1.0, w * onnx_conf + (1 - w) * max(0.5, rule_norm))
+            conf = P_pos  # confidence 0–1 murni
         elif ensemble_score < -0.2:
             label = "negatif"
-            conf = min(1.0, w * (1 - onnx_conf) + (1 - w) * max(0.5, -rule_norm))
+            conf = P_neg
         else:
             label = "netral"
-            conf = 0.5
+            # kalau model 2 kelas → netral = 1 - (pos + neg)
+            if P_neu is not None:
+                conf = P_neu
+            else:
+                conf = 1 - (P_pos + P_neg)
+                if conf < 0:
+                    conf = 0.5  # fallback aman
 
-        return {"label": label, "score": float(conf), "model": self.version, "ensemble_score": float(ensemble_score)}
+        # pastikan 0–1
+        conf = float(max(0.0, min(1.0, conf)))
+
+        return {
+            "label": label,
+            "score": conf,             # ALWAYS 0–1
+            "model": self.version,
+            "ensemble_score": float(ensemble_score)
+        }
+
