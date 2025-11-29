@@ -1,7 +1,11 @@
 import time
-from sentiment_model import IndoBERTAnalyzer
+# from sentiment_model import IndoBERTAnalyzer
+from light_sentiment_model import LightSentimentAnalyzer
 
-analyzer = IndoBERTAnalyzer()
+
+# analyzer = IndoBERTAnalyzer()
+analyzer = LightSentimentAnalyzer()
+
 
 def run_preprocessing(raw_id, raw_text):
     start_time = time.time()
