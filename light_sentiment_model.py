@@ -2,6 +2,8 @@ import re
 
 class LightSentimentAnalyzer:
     def __init__(self):
+        self.version = "light-v1"
+    def __init__(self):
         # kamus kata positif
         self.positive = {
             "bagus", "baik", "mantap", "luar biasa", "keren", "top",
