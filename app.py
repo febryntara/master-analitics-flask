@@ -32,10 +32,13 @@ app.logger.propagate = False
 @app.before_request
 def log_request_info():
     try:
-        payload = request.get_json(force=False, silent=True)
+        payload = request.get_json(force=False, silent=True) or {}
+        # ambil hanya raw_id
+        payload_preview = {"raw_id": payload.get("raw_id")}
     except Exception:
-        payload = None
-    app.logger.info(f'{request.method} {request.path} - from {request.remote_addr} - payload: {payload}')
+        payload_preview = None
+    app.logger.info(f'{request.method} {request.path} - from {request.remote_addr} - data: {payload_preview}')
+
 
 # ============================
 # ROUTE PREPROCESS
