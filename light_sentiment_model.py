@@ -43,13 +43,13 @@ class LightSentimentAnalyzer:
         # Skor confidence simple
         total = pos + neg
         if total == 0:
-            return {"label": "neutral", "score": 0.50}
+            return {"label": "netral", "score": 0.50}
 
         score = max(pos, neg) / total
 
         if pos > neg:
-            return {"label": "positive", "score": float(score)}
+            return {"label": "positif", "score": float(score)}
         elif neg > pos:
-            return {"label": "negative", "score": float(score)}
+            return {"label": "negatif", "score": float(score)}
         else:
-            return {"label": "neutral", "score": float(score)}
+            return {"label": "netral", "score": float(score)}
