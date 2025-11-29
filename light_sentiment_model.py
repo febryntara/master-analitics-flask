@@ -1,9 +1,12 @@
 import re
 
-class LightSentimentAnalyzer:
+class LightSentimentAnalyzer:      
+        
     def __init__(self):
+        # Inisialisasi model ringan
+        self.model_name = "light-sentiment-model"
         self.version = "light-v1"
-    def __init__(self):
+        
         # kamus kata positif
         self.positive = {
             "bagus", "baik", "mantap", "luar biasa", "keren", "top",
