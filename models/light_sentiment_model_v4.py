@@ -2,6 +2,14 @@
 import re
 import os
 import numpy as np
+from dics.lex_pos import LEX_POS
+from dics.lex_neg import LEX_NEG
+from dics.bigram_pos import BIGRAM_POS
+from dics.bigram_neg import BIGRAM_NEG
+from dics.intensifiers import INTENSIFIERS
+from dics.downtoners import DOWNTONERS
+from dics.negations import NEGATIONS
+from dics.domain_words import DOMAIN_WORDS
 
 # try load tokenizer (required if ONNX used)
 try:
@@ -36,17 +44,14 @@ class LightSentimentAnalyzerV4:
         self.onnx_weight = float(onnx_weight)
 
         # ----- rule-based lexicons -----
-        self.lex_pos = {"bagus": 1, "baik": 1, "mantap": 1, "puas": 1, "keren": 1}
-        self.lex_neg = {"buruk": 1, "jelek": 1, "parah": 1, "kecewa": 2, "lemot": 1}
-
-        self.bigram_pos = {"sangat bagus": 2, "luar biasa": 2}
-        self.bigram_neg = {"tidak bagus": -2, "tidak puas": -2, "kurang memuaskan": -2}
-
-        self.intensifiers = {"sangat": 1.5, "banget": 1.5}
-        self.downtoners = {"cukup": 0.6, "agak": 0.6}
-        self.negations = {"tidak", "tak", "ga", "gak", "bukan", "nggak"}
-
-        self.domain_words = {"layanan": 1.2, "pengiriman": 1.2, "harga": 1.2}
+        self.lex_pos = LEX_POS
+        self.lex_neg = LEX_NEG
+        self.bigram_pos = BIGRAM_POS
+        self.bigram_neg = BIGRAM_NEG
+        self.intensifiers = INTENSIFIERS
+        self.downtoners = DOWNTONERS
+        self.negations = NEGATIONS
+        self.domain_words = DOMAIN_WORDS
 
         # ----- ONNX init -----
         self.ort_session = None
